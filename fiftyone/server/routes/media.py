@@ -61,7 +61,18 @@ class Media(HTTPEndpoint):
         path = request.query_params["filepath"]
 
         response: t.Union[FileResponse, StreamingResponse]
-
+        
+        # Handle GCS paths (need to run gcloud auth application-default login in terminal)
+        if path.startswith("gs://"):
+            try:
+                from google.cloud import storage
+                client = storage.Client()
+                parts = path.replace("gs://", "").split("/", 1)
+                blob = client.bucket(parts[0]).blob(parts[1])
+                content = await anyio.to_thread.run_sync(lambda: blob.download_as_bytes())
+                return Response(content=content, media_type=guess_type(path)[0])
+            except Exception as e:
+                return Response(content=str(e), status_code=404)
         try:
             await anyio.to_thread.run_sync(os.stat, path)
         except FileNotFoundError:
