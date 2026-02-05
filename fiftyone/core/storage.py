@@ -126,6 +126,10 @@ def normalize_path(path):
     Returns:
         the normalized path
     """
+    if (
+        "://" in path
+    ):  # Avoid normalizing URL/cloud storage paths (e.g., gs://, s3://, http://)
+        return path
     return os.path.abspath(os.path.expanduser(path))
 
 
