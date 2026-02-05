@@ -15,7 +15,11 @@ import { Nullable } from "vitest";
 
 export const getSampleSrc = (url: string) => {
   if (determinePathType(url) === PathType.URL) {
-    return url;
+    // Only return URL directly if it's HTTP/HTTPS (browser-fetchable)
+    if (url.startsWith("http://") || url.startsWith("https://")) {
+      return url;
+    }
+    // Cloud storage URLs (gs://, s3://, etc.) should fall through to media proxy which has been modified to be able to retrieve gs:// paths (fiftyone/fiftyone/server/routes/media.py)
   }
 
   const params = getFetchParameters();
