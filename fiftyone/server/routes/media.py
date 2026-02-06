@@ -6,6 +6,8 @@ FiftyOne Server /media route
 |
 """
 
+import datetime
+import functools
 import os
 import typing as t
 
@@ -17,6 +19,7 @@ from starlette.endpoints import HTTPEndpoint
 from starlette.requests import Request
 from starlette.responses import (
     FileResponse,
+    RedirectResponse,
     Response,
     StreamingResponse,
     guess_type,
@@ -53,6 +56,24 @@ async def ranged(
     if hasattr(file, "close"):
         await file.close()
 
+_gcs_client = None
+
+def _get_gcs_client():
+    global _gcs_client
+    if _gcs_client is None:
+        from google.cloud import storage
+        _gcs_client = storage.Client()
+    return _gcs_client
+
+# signed URLs require either a service account key or the IAM iam.serviceAccounts.signBlob permission on your application-default credentials
+@functools.lru_cache(maxsize=4096)
+def _generate_signed_url(path: str) -> str:
+    client = _get_gcs_client()
+    parts = path.replace("gs://", "").split("/", 1)
+    blob = client.bucket(parts[0]).blob(parts[1])
+    return blob.generate_signed_url(
+        expiration=datetime.timedelta(hours=1),
+    )
 
 class Media(HTTPEndpoint):
     async def get(
@@ -61,16 +82,14 @@ class Media(HTTPEndpoint):
         path = request.query_params["filepath"]
 
         response: t.Union[FileResponse, StreamingResponse]
-        
+
         # Handle GCS paths (need to run gcloud auth application-default login in terminal)
         if path.startswith("gs://"):
             try:
-                from google.cloud import storage
-                client = storage.Client()
-                parts = path.replace("gs://", "").split("/", 1)
-                blob = client.bucket(parts[0]).blob(parts[1])
-                content = await anyio.to_thread.run_sync(lambda: blob.download_as_bytes())
-                return Response(content=content, media_type=guess_type(path)[0])
+                url = await anyio.to_thread.run_sync(
+                    lambda: _generate_signed_url(path)
+                )
+                return RedirectResponse(url=url)
             except Exception as e:
                 return Response(content=str(e), status_code=404)
         try:
