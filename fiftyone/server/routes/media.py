@@ -56,14 +56,18 @@ async def ranged(
     if hasattr(file, "close"):
         await file.close()
 
+
 _gcs_client = None
+
 
 def _get_gcs_client():
     global _gcs_client
     if _gcs_client is None:
         from google.cloud import storage
+
         _gcs_client = storage.Client()
     return _gcs_client
+
 
 # signed URLs require either a service account key or the IAM iam.serviceAccounts.signBlob permission on your application-default credentials
 @functools.lru_cache(maxsize=4096)
@@ -74,6 +78,7 @@ def _generate_signed_url(path: str) -> str:
     return blob.generate_signed_url(
         expiration=datetime.timedelta(hours=1),
     )
+
 
 class Media(HTTPEndpoint):
     async def get(
