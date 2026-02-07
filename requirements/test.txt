@@ -12,3 +12,4 @@ tensorflow
 torch>=2.2.2
 torchvision>=0.17.2
 twine>=3
+SQLAlchemy # for loading data from images_v4 (see fiftyone/db_utils.py)
