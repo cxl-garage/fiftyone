@@ -505,9 +505,14 @@ class Sample(_SampleMixin, Document, metaclass=SampleSingleton):
         :class:`Sample` instance.
 
     Args:
-        filepath: the path to the data on disk. The path is converted to an
-            absolute path (if necessary) via
-            :func:`fiftyone.core.storage.normalize_path`
+        filepath: the path to the data on disk, or a remote URL. Local paths
+            are converted to absolute paths via
+            :func:`fiftyone.core.storage.normalize_path`. Remote URLs
+            (containing ``://``) are passed through unchanged. Currently
+            supported remote schemes are ``http://`` (public URLs) and
+            ``gs://`` (Google Cloud Storage). To add support for additional
+            cloud storage schemes, see
+            :mod:`fiftyone.server.routes.media`
         tags (None): a list of tags for the sample
         metadata (None): a :class:`fiftyone.core.metadata.Metadata` instance
         **kwargs: additional fields to dynamically set on the sample
